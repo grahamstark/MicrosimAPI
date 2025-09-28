@@ -1,5 +1,5 @@
 logical_types = {
-    "taxallowances": {
+    "taxallowance": {
         "min":0, 
         "max":100000, 
         "next":10,
@@ -7,23 +7,36 @@ logical_types = {
         "currencyCode": "GBP",
         "display": "normal", // (hidden|normal|password|label_only) "normal"
         "check": "halt" // (dont_check|warn|halt) "dont_check"
+    },
+    "taxband":{
+        "units":"annual",
+        "editinfo":{"min": 0, "max":100000}
+    },
+    "taxrate":{
+        "units":"percent",
+        "editinfo":{"min": 0, "max":100}
     }
 }
     
 it = {
     "personal_allowance":{
+        "label": "Personal Allowance",
+        "journalese": "Personal Allowance £s p.a",
+        "description": "## Personal Allowance\nThis is the ...",
         "units": "year",
         "type": "real",
-        "editinfo":{"logicaltype": "taxallowances"}
+        "logicaltype": "taxallowances"
     },
     "ratebands": {
-        "rates": "editinfo":{"min": 0, "max":100},
-        "bands": "editinfo":{"min": 0, "max":100000}
+        "label": "Rates and Bands for Non-Savings Income",
+        "journalese": "Bands in £s p.a, rates in %",
+        "description": "## Bands in £s p.a, rates in %",
+        "rates": {"logicaltype": "taxrate"},
+        "bands": {"logicaltype": "taxband"}
     }
 }
 
-sys = {
-    "logical_types": logical_types,
+params = {
     "it":it
 }
     
@@ -54,3 +67,18 @@ labels = {
         }
     }
 }
+
+scotben={
+    "logical_types": logical_types,
+    "params":params,
+    "settings": settings,
+    "labels":labels
+}
+
+
+// julia via json.stringify
+s = """
+
+{"logical_types":{"taxallowance":{"min":0,"max":100000,"next":10,"uprate":"rooker_wise","currencyCode":"GBP","display":"normal","check":"halt"},"taxband":{"units":"annual","editinfo":{"min":0,"max":100000}},"taxrate":{"units":"percent","editinfo":{"min":0,"max":100}}},"params":{"it":{"personal_allowance":{"label":"Personal Allowance","journalese":"Personal Allowance £s p.a","description":"## Personal Allowance\\nThis is the ...","units":"year","type":"real","logicaltype":"taxallowances"},"ratebands":{"label":"Rates and Bands for Non-Savings Income","journalese":"Bands in £s p.a, rates in %","description":"## Bands in £s p.a, rates in %","rates":{"logicaltype":"taxrate"},"bands":{"logicaltype":"taxband"}}}},"settings":{"data_years":[2019,2021,2022,2023],"to_q":3,"to_y":2025},"labels":{"sys":{"it":{"personal_allowance":{"label":"Personal Allowance","journalese":"Personal Allowance £s p.a","description":"## Personal Allowance\\nThis is the ..."}}}}}
+
+"""

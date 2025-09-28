@@ -1,7 +1,7 @@
 module MicrosimAPI
 
 using JSON3
-using Mux
+using Oxygen
 
 
 # Write your package code here.

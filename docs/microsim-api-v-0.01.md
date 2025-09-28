@@ -29,33 +29,34 @@ Long-term users - previous results, etc.
 
 ```
 
-api.scotben.virtual-worlds.scot
+api.virtual-worlds.scot
 
-/session/start
-/session/destroy
+/[model]/session/start
+/[model]/session/destroy
 
-/params/set
-/params/validate
-/params/describe
-/params/defaults
-/params/page
-/params/helppage
-/params/labels
+/[model]/params/list-available
+/[model]/params/initialise/[defaults]
+/[model]/params/set
+/[model]/params/validate
+/[model]/params/describe
+/[model]/params/subsys
+/[model]/params/helppage
+/[model]/params/labels
 
-or /params/[sysno]/tax/set ... for individual pages
+or /params/[sysno]/[subsys]/[subsys]/set ... for individual pages
 
-/settings/set
-/settings/validate
+/[model]/settings/set
+/[model]/settings/validate
 ...
 
-/run/submit
-/run/status
-/run/abort
+/[model]/run/submit
+/[model]/run/status
+/[model]/run/abort
 
-/output/items
-/output/phunpak
-/output/labels
-/output/fetch/item
+/[model]/output/items
+/[model]/output/phunpak
+/[model]/output/labels
+/[model]/output/fetch/item
 
 
 ```

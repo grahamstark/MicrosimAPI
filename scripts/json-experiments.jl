@@ -3,18 +3,46 @@ using Parameters
 
 it = JSON3.read("""
 {
-    "personal_allowance":{
-        "units": "year",
-        "type": "real",
-        "editinfo":{"logicaltype": "taxallowances"}
+    logicaltypes:{
+        "taxband":{
+            "units":"annual",
+            "editinfo":{"min": 0, "max":100000}
+        },
+        "taxrate":{
+            "units":"percent",
+            "editinfo":{"min": 0, "max":100}
+        },
+        "taxallowance":{
+            "units":"annual",
+            "editinfo":{"min": 0, "max":1000000}
+        }
     },
-    "ratebands": {
-        "rates": "editinfo":{"min": 0, "max":100},
-        "bands": "editinfo":{"min": 0, "max":100000}
+    "params":{
+        "personal_allowance":{
+            "units": "year",
+            "type": "real",
+            "editinfo":{"logicaltype": "taxallowance"}
+        },
+        "ratebands": {
+            "rates": {
+                "units":"percent",
+                "type":"real",
+                "editinfo":{"min": 0, "max":100}
+            },
+            "bands":{
+                "logicaltype":"taxband" 
+            }
+        }
     }
 }
 
 """)
+
+it2 = """
+
+
+
+"""
 
 @enum UprateType dont_uprate rooker_wise standard_uprate
 @enum DisplayType hidden normal_display password_display label_only
