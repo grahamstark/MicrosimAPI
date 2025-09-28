@@ -1,0 +1,32 @@
+name = "MicrosimAPI"
+uuid = "61038afa-740f-4e54-9cae-22f264703afd"
+authors = ["Graham Stark"]
+version = "1.0.0-DEV"
+
+[deps]
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+Mux = "a975b10e-0019-58db-a62f-e48ff68538c9"
+Oxygen = "df9a0d86-3283-4920-82dc-4555fc0d1d8b"
+Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+ScottishTaxBenefitModel = "a734f2ee-4b7f-478f-84ca-797081d39f6e"
+
+[sources]
+ScottishTaxBenefitModel = {url = "https://github.com/grahamstark/ScottishTaxBenefitModel.jl"}
+
+[compat]
+DataStructures = "0,1"
+HTTP = "1"
+JSON3 = "1"
+Mux = "1"
+Oxygen = "1,2"
+Parameters = "0,1"
+ScottishTaxBenefitModel = "0,1"
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

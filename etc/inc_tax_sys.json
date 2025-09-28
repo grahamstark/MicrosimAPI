@@ -1,0 +1,56 @@
+logical_types = {
+    "taxallowances": {
+        "min":0, 
+        "max":100000, 
+        "next":10,
+        "uprate": "rooker_wise", // (dont_uprate|rooker_wise|standard_uprate) "dont_uprate"
+        "currencyCode": "GBP",
+        "display": "normal", // (hidden|normal|password|label_only) "normal"
+        "check": "halt" // (dont_check|warn|halt) "dont_check"
+    }
+}
+    
+it = {
+    "personal_allowance":{
+        "units": "year",
+        "type": "real",
+        "editinfo":{"logicaltype": "taxallowances"}
+    },
+    "ratebands": {
+        "rates": "editinfo":{"min": 0, "max":100},
+        "bands": "editinfo":{"min": 0, "max":100000}
+    }
+}
+
+sys = {
+    "logical_types": logical_types,
+    "it":it
+}
+    
+settings = {
+    "data_years":[2019,2021,2022,2023],
+    "to_q": 3,
+    "to_y": 2025
+}
+
+labels = {
+    "sys.it.personal_allowance":{
+        "label": "Personal Allowance",
+        "journalese": "Personal Allowance £s p.a",
+        "description": "## Personal Allowance\nThis is the ..."
+    }
+
+}
+
+
+labels = {
+    "sys":{
+        "it":{
+            "personal_allowance":{
+                "label": "Personal Allowance",
+                "journalese": "Personal Allowance £s p.a",
+                "description": "## Personal Allowance\nThis is the ..."        
+            }
+        }
+    }
+}
