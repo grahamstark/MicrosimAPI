@@ -27,7 +27,7 @@ it = {
         "type": "real",
         "logicaltype": "taxallowances"
     },
-    "ratebands": {
+    "non_savings_ratebands": {
         "label": "Rates and Bands for Non-Savings Income",
         "journalese": "Bands in £s p.a, rates in %",
         "description": "## Bands in £s p.a, rates in %",
@@ -57,13 +57,11 @@ labels = {
 
 
 labels = {
-    "sys":{
-        "it":{
-            "personal_allowance":{
-                "label": "Personal Allowance",
-                "journalese": "Personal Allowance £s p.a",
-                "description": "## Personal Allowance\nThis is the ..."        
-            }
+    "it":{
+        "personal_allowance":{
+            "label": "Personal Allowance",
+            "journalese": "Personal Allowance £s p.a",
+            "description": "## Personal Allowance\nThis is the ..."        
         }
     }
 }
@@ -75,6 +73,41 @@ scotben={
     "labels":labels
 }
 
+itdef = {
+    "non_savings_rates": [19,20,21,42,45,48],
+    "non_savings_thresholds":[2306.0,
+    13991.0,
+    31092.0,
+    62430.0,
+    112570.0],
+}
+
+nidef = {
+    "primary_class_1_rates" =  [0.0, 0.0, 8.0, 2.0 ],
+    "primary_class_1_bands" =  [123.0, 242.0, 967.0, 9999999999999.9], // the '-1' here is because json can't write inf
+    "secondary_class_1_rates" =  [0.0, 15.0, 15.0 ], // keep 2 so
+    "secondary_class_1_bands" =  [175.0, 967.0, 99999999999999.9 ],
+    "state_pension_age" =  66 // fixme move
+}
+
+ucdef = {
+    "age_18_24" =  316.98,
+    "age_25_and_over" =  400.14,
+  
+    "couple_both_under_25" =  497.55,
+    "couple_oldest_25_plus" =  628.10,
+  
+    "first_child" =  339.00,
+    "subsequent_child" =  292.81,
+    "disabled_child_lower" =  158.76,
+    "disabled_child_higher" =  495.87,
+    "limited_capcacity_for_work_activity" =  423.27
+}
+defaults = {
+    "it": itdef,
+    "ni": nidef,
+    "uc": ucdef
+}
 
 // julia via json.stringify
 s = """
