@@ -22,29 +22,52 @@ function generateSessionToken()
   return randstring('0':'9', 32)
 end
 
-
-@get "/session/start" function(req::HTTP.Request)
-    JsonFragment
-    session_token = generateSessionToken()
-    session = Session( 
-        now(),
-        now() + SESSION_TIMEOUT,
-        now()
-    )
-    sessions[session_token] = session
-    return json( (; 
-        session_token, 
-        success = true, 
-        expires_in = SESSION_TIMEOUT ))
-end
-
-@get "/session/destroy" function(req::HTTP.Request)
-
-end
-
-
 include("scotben.jl")
 
-Oxygen.serve()
+"""
+Check if part of a session and start one if not.
+"""
+function session_middleware( handler )
+    return function( req :: HTTP.Request )
+        jp = Dict()
+        try
+            pl = IOBuffer(HTTP.payload(req))
+            jp = JSON3.parse(pl)
+        catch e
+            ;
+        end
+        session_token = get(jp,"session_token",nothing)
+        if isnothing( session_token )
+            session_token = generateSessionToken()
+            session = Session( 
+                now(),
+                now() + SESSION_TIMEOUT,
+                now()
+            )
+            sessions[session_token] = session
+            jp[session_token] = session
+
+        else
+            session = sessions[session_token]
+            session.expires += SESSION_TIMEOUT # extend the session
+            session.last_activity = now()
+        end
+        return handler( req ) 
+        #=
+        json( (; 
+            session_token, 
+            success = true, 
+            expires_in = SESSION_TIMEOUT ))
+        =#
+    end # function
+end
+
+function cors_middleware( handler )
+    return function( req::HTTP.Request )
+        return handler( req )
+    end
+end
+
+Oxygen.serve( middleware = [cors_middleware, session_middleware])
 
 end

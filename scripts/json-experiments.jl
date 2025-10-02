@@ -3,7 +3,7 @@ using Parameters
 
 it = JSON3.read("""
 {
-    logicaltypes:{
+    "logicaltypes":{
         "taxband":{
             "units":"annual",
             "editinfo":{"min": 0, "max":100000}
