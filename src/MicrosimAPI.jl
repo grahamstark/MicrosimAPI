@@ -1,41 +1,29 @@
 module MicrosimAPI
+using Reexport
+@reexport using JSON3
+@reexport using Oxygen
+@reexport using HTTP
+@reexport using Random
+@reexport using Parameters
+@reexport using Dates
+@reexport using UUIDs
+@reexport using ScottishTaxBenefitModel
 
-using JSON3
-using Oxygen
-using HTTP
-using Random
-using Parameters
-using Dates
-using UUIDs
+@oxidise
 
-# const SESSION_TIMEOUT = Second(24 * 60 * 60) # 24 Hours
 const SESSION_TIMEOUT = Minute(240)
 
-mutable struct Session
-    created :: Date
-    expires :: Date
-    last_activity :: Date
-end
+const CORS_HEADERS = [
+    "Access-Control-Allow-Origin" => "*",
+    "Access-Control-Allow-Headers" => "*",
+    "Access-Control-Allow-Methods" => "POST, GET, OPTIONS"
+]
 
-sessions = Dict{String,Session}()
-
-# Generate secure session token
-function generateSessionToken()
-  return randstring('0':'9', 32)
-end
 
 include("scotben.jl")
 
-# Content is user-generated and unverified.
-1
-using Oxygen
-using HTTP
-
-using Dates
-
 # Simple in-memory session store
 const SESSIONS = Dict{String, Dict{String, Any}}()
-
 
 """
 Session middleware that creates or retrieves sessions based on cookies
@@ -44,7 +32,7 @@ function session_middleware(handler)
     return function(req::HTTP.Request)
         # Try to get session ID from cookie
         session_id = get_cookie(req, "session_id")
-        
+        @show "session_middleware called"
         
         # Create new session if none exists or session is invalid
         if isnothing(session_id) || !haskey(SESSIONS, session_id)
@@ -74,8 +62,8 @@ function session_middleware(handler)
             "session_id=$session_id; Path=/; HttpOnly; SameSite=Lax; Max-Age=1800")
         
         return response
-    end
-end
+    end # function
+end # session_middleware
 
 """
 Helper function to get cookie value from request
@@ -107,7 +95,7 @@ function cleanup_sessions()
     for sid in expired_sessions
         delete!(SESSIONS, sid)
     end
-end
+end # cleanup
 
 """
 Helper to get current session data from request
@@ -116,8 +104,27 @@ function get_session(req::HTTP.Request)
     return get(req.context, :session, Dict{String, Any}())
 end
 
+#=
+
+
 # Apply middleware globally
 @middleware session_middleware
+
+# my code
+mutable struct Session
+    created :: Date
+    expires :: Date
+    last_activity :: Date
+end
+
+sessions = Dict{String,Session}()
+
+# Generate secure session token
+function generateSessionToken()
+  return randstring('0':'9', 32)
+end
+
+
 
 # Example routes
 @get "/" function(req::HTTP.Request)
@@ -222,12 +229,31 @@ function session_middleware( handler )
     end # function
 end
 
+=#
+
+export cors_middleware, session_middleware
+
 function cors_middleware( handler )
     return function( req::HTTP.Request )
-        return handler( req )
-    end
-end
+        @show "cors_middleware"
+        if HTTP.method(req)=="OPTIONS"
+            return HTTP.Response(200, CORS_HEADERS)  
+        else         
+            return handler( req )
+        end        
+    end # function
+end # 
 
-Oxygen.serve( middleware = [cors_middleware, session_middleware])
+staticfiles( "web", "web" )
 
+#=
+function run_server()
+    Oxygen.serve( 
+        # host="localhost", 
+        port=8089,
+        revise=:eager,
+        middleware = [cors_middleware, session_middleware])
 end
+=#
+
+end # module
