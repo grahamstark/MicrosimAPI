@@ -23,7 +23,7 @@ const SESSIONS = Dict{String, Dict{String, Any}}()
 include("middleware.jl")
 include("scotben.jl")
 
-staticfiles( "web", "web" )
+# staticfiles( "web", "web" )
 dynamicfiles( "web", "web" )
 
 #=
