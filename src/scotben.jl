@@ -4,22 +4,54 @@
 
 @with_kw mutable struct SBRunData
     owner::String
-    thing::String
+    system :: TaxBenefitSystem
+    results :: NamedTuple
+    summary :: NamedTuple
+    examples :: AbstractArray
+    status  :: String
 end
 
 SB_RUNS = Dict{String,SBRunData}()
+
+function list_default_systems()
+    choices=OrderedDict()
+    for financial_year in 2025:-1:2019
+        for scottish in [true,false]
+            sn = scottish ? "Scotland" : "rUK"
+            default = financial_year == 2025 && scottish ? true : false
+            name = "System FY $(financial_year)-$(financial_year+1); $sn"
+            choices[name] = (;name,financial_year,scottish,default)
+        end
+    end
+    choices 
+end
+
+
+const DEFAULT_SYSTEMS = list_default_systems()
 
 """
 
 """
 function params_list_available(req::HTTP.Request)
-    return "List Available"
+    session = get_session( req )
+    @show session 
+    return json(DEFAULT_SYSTEMS)
 end
 
 """
 
 """
-function params_initialise(req::HTTP.Request)
+function params_initialise(req::HTTP.Request, JsonFragment)
+    session = get_session( req )
+    session_id = req.context[:session_id]
+    data = json(req)
+    
+    # Safely extract parameter with get()
+    defid = get(data, "default-sys", nothing)
+    def = DEFAULT_SYSTEMS[defid]
+    SBRUNS[session_id].system = 
+        STBParameters.get_default_system_for_fin_year( 
+            def.financial_year; scotland=def.scottish )
     return "Initialise"
 end
 
@@ -27,6 +59,13 @@ end
 
 """
 function params_set(req::HTTP.Request)
+    sp = json( req, SimpleParams )
+    errs = validate( sp )
+    if length( errs ) == 0
+
+    else
+
+    end
     return "Set"
 end
 

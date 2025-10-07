@@ -1,15 +1,37 @@
 module MicrosimAPI
 
-using Reexport
-using JSON3
-using Oxygen
-using HTTP
-using Random
-using Parameters
+using DataStructures
 using Dates
+using HTTP
+using JSON3
+using LoggingExtras
+using Observables
+using Oxygen
+using Parameters
+using Random
+using Reexport
+using StructTypes
 using UUIDs
+
+import Base.get # Dunno why I need this ... 
+
 using ScottishTaxBenefitModel
+using .BCCalcs
+using .Definitions
+using .ExampleHelpers
+using .FRSHouseholdGetter
+using .GeneralTaxComponents
+using .LocalLevelCalculations
+using .ModelHousehold
+using .Monitor
+using .Runner
+using .RunSettings
+using .SimplePovertyCounts: GroupPoverty
+using .SingleHouseholdCalculations
+using .STBIncomes
+using .STBOutput
 using .STBParameters
+using .Utils
 
 @oxidise
 
@@ -21,6 +43,7 @@ const SESSION_TIMEOUT = Minute(240)
 const SESSIONS = Dict{String, Dict{String, Any}}()
 
 include("middleware.jl")
+include("definitions.jl")
 include("scotben.jl")
 
 # staticfiles( "web", "web" )

@@ -81,7 +81,8 @@ end # cleanup
 Helper to get current session data from request
 """
 function get_session(req::HTTP.Request)
-    return get(req.context, :session, Dict{String, Any}())
+    @show typeof( req.context )
+    return Base.get(req.context, :session, Dict{String, Any}())
 end
 
 function cors_middleware( handler )
