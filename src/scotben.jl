@@ -2,17 +2,6 @@
 
 #
 
-@with_kw mutable struct SBRunData
-    owner::String
-    system :: TaxBenefitSystem
-    results :: NamedTuple
-    summary :: NamedTuple
-    examples :: AbstractArray
-    status  :: String
-end
-
-SB_RUNS = Dict{String,SBRunData}()
-
 function list_default_systems()
     choices=OrderedDict()
     for financial_year in 2025:-1:2019
@@ -49,6 +38,7 @@ function params_initialise(req::HTTP.Request, JsonFragment)
     # Safely extract parameter with get()
     defid = get(data, "default-sys", nothing)
     def = DEFAULT_SYSTEMS[defid]
+
     SBRUNS[session_id].system = 
         STBParameters.get_default_system_for_fin_year( 
             def.financial_year; scotland=def.scottish )

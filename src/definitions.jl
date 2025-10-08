@@ -4,6 +4,7 @@
 const BASE_UUID = UUID("985c312f-129b-4acd-9e40-cb629d184183")
 
 const BIG_A = 9999999999
+
 struct SimpleParams{T}
     taxrates :: Vector{T}
     taxbands :: Vector{T}
@@ -202,8 +203,11 @@ function api_run( settings :: Settings, systems::Vector; supress_dumps=false )::
     dirname = joinpath( settings.output_dir, rname ) 
     save_hbai_graph( settings, results, summaries ) 
     # zipname = zip_dump( settings )
-    summaries, results, short_summary, dirname
+    summaries, results, short_summary
 end
+
+const DEFAULT_SUMMARIES, DEFAULT_RESULTS, DEFAULT_SHORT_SUMMARIES = 
+    api_run( Settings(), [DEFAULT_WEEKLY_PARAMS, DEFAULT_WEEKLY_PARAMS])
 
 struct ParamsAndSettings{T}
 	simple   :: SimpleParams{T}
@@ -228,9 +232,22 @@ const MR_UP_GOOD = [1,0,0,0,0,0,0,-1,-1]
 const COST_UP_GOOD = [1,1,1,1,-1,-1,-1,-1,-1,-1,-1]
 
 struct AllOutput
-	results
-	summary
-	gain_lose
-	examples
+	summary :: NamedTuple
+	examples :: Vector
 end
 
+#
+# needs to be here 
+#
+# Save results by query string & just return that
+# TODO complete this.
+const CACHED_RESULTS = Dict{UInt,AllOutput}()
+
+function cacheout(simp::SimpleParams,allo::AllOutput)
+	CACHED_RESULTS[riskyhash(simp)] = allo
+end
+
+function getout( simp::SimpleParams )::Union{Nothing,AllOutput}
+	u = riskyhash(simp)
+    return Base.get( CACHED_RESULTS, u, nothing )
+end
