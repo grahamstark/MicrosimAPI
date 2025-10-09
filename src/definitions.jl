@@ -185,13 +185,16 @@ end
 
 const DEFAULT_SIMPLE_PARAMS :: SimpleParams = map_full_to_simple( DEFAULT_PARAMS )
 
+struct AllOutput
+	summary :: NamedTuple
+    short_summary :: NamedTuple
+	examples :: Vector
+end
 
-function api_run( settings :: Settings, systems::Vector; supress_dumps=false )::Tuple
+function api_run( settings :: Settings, systems::Vector; supress_dumps=false )::AllOutput
     # delete higher rates
     global running_total
     tot = 0
-    results = nothing
-    summaries = nothing 
     results = do_one_run( settings, systems, run_progress )
     summaries = summarise_frames!( results, settings )
     dump_summaries( settings, summaries )
@@ -199,19 +202,34 @@ function api_run( settings :: Settings, systems::Vector; supress_dumps=false )::
     if ! supress_dumps
         dump_summaries( settings, summaries )
     end
-    rname = basiccensor( settings.run_name )
-    dirname = joinpath( settings.output_dir, rname ) 
-    save_hbai_graph( settings, results, summaries ) 
     # zipname = zip_dump( settings )
-    summaries, results, short_summary
+    examples = calc_examples( settings, systems[1], systems[2])
+    return AllOutput( summaries, short_summary, examples )
 end
 
-const DEFAULT_SUMMARIES, DEFAULT_RESULTS, DEFAULT_SHORT_SUMMARIES = 
-    api_run( Settings(), [DEFAULT_WEEKLY_PARAMS, DEFAULT_WEEKLY_PARAMS])
+function get_default_output()::AllOutput
+    settings = Settings()
+
+end
+
+const DEFAULT_OUTPUT = get_default_output()
+
+@with_kw mutable struct SessionEntry
+    session_id = ""
+    last_accessed = now()
+    created_at = now()
+
+    params = DEFAULT_SIMPLE_PARAMS
+    results = nothing
+end
+
+
+# Simple in-memory session store
+const SESSIONS = Dict{String, SessionEntry}()
 
 struct ParamsAndSettings{T}
-	simple   :: SimpleParams{T}
-	session  :: String
+	session_id  :: String
+	simple   :: Vector{SimpleParams{T}}
 end
 #
 # this many simultaneous (sp) runs
@@ -227,15 +245,6 @@ IN_QUEUE = Channel{ParamsAndSettings}(QSIZE)
 logger = FileLogger("log/stb2_log.txt")
 global_logger(logger)
 LogLevel( Logging.Debug )
-
-const MR_UP_GOOD = [1,0,0,0,0,0,0,-1,-1]
-const COST_UP_GOOD = [1,1,1,1,-1,-1,-1,-1,-1,-1,-1]
-
-struct AllOutput
-	summary :: NamedTuple
-	examples :: Vector
-end
-
 #
 # needs to be here 
 #
@@ -250,4 +259,49 @@ end
 function getout( simp::SimpleParams )::Union{Nothing,AllOutput}
 	u = riskyhash(simp)
     return Base.get( CACHED_RESULTS, u, nothing )
+end
+
+
+function do_run(
+    prs :: ParamsAndSettings ) :: AllOutput
+	@info "do_run entered"
+	settings = initialise_settings()
+	sys1 :: TaxBenefitSystem = map_simple_to_full( prs.simple[1] )
+    sys2 :: TaxBenefitSystem = map_simple_to_full( prs.simple[2] )
+    weeklyise!( sys1 )
+	weeklyise!( sys2 )
+	obs = Observable(
+		Progress(settings.uuid, "",0,0,0,0))
+	tot = 0
+	of = on(obs) do p
+        tot += p.step
+        @info "monitor tot=$tot p = $(p)"
+		GenieSession.set!( session, :progress, (progress=p,total=tot))
+	end
+	results = do_one_run( settings, [sys], obs )
+	outf = summarise_frames!( results, settings )
+	gl = make_gain_lose( DEFAULT_RESULTS.results.hh[1], results.hh[1], settings )
+	exres = calc_examples( DEFAULT_WEEKLY_PARAMS, sys, settings )
+	aout = AllOutput( results, outf, gl, exres )
+    cacheout(simple,aout)
+    obs[]= Progress( settings.uuid, "end", -99, -99, -99, -99 )
+    aout
+end
+
+function submit_job( 
+    session_id :: String, 
+    simple  :: SimpleParams )
+    @info "submit_job entered"
+    put!( IN_QUEUE, ParamsAndSettings( simple, session_id ))
+	@info "submit exiting queue is now $IN_QUEUE"
+end
+
+function calc_one()
+	while true
+		@info "calc_one entered"
+		params = take!( IN_QUEUE )
+		@info "params taken from IN_QUEUE; got params"
+		do_run( params.session, params.simple )
+		@info "model run OK; putting results into CACHED_RESULTS"		
+	end
 end

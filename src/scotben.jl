@@ -22,8 +22,8 @@ const DEFAULT_SYSTEMS = list_default_systems()
 
 """
 function params_list_available(req::HTTP.Request)
-    session = get_session( req )
-    @show session 
+    session_data = get_session_data( req )
+    @show session_data 
     return json(DEFAULT_SYSTEMS)
 end
 
@@ -31,7 +31,7 @@ end
 
 """
 function params_initialise(req::HTTP.Request, JsonFragment)
-    session = get_session( req )
+    session_data = get_session_data( req )
     session_id = req.context[:session_id]
     data = json(req)
     
@@ -206,15 +206,22 @@ end
 
 """
 function output_items(req::HTTP.Request)
-    @show MicrosimAPI.SESSIONS
-    return "Items"
+    @show MicrosimAPI.SESSIONS    
+    return HTTP.Response(
+        200,
+        ["Content-Type" => "text/markdown"],
+        body=STBOutput.DUMP_FILE_DESCRIPTION )
 end
 
 """
 
 """
 function output_phunpak(req::HTTP.Request)
-    return "Phunpak"
+    output_zipfile="" # TODO
+    return HTTP.Response(
+        200,
+        ["Content-Type" => "application/zip"],
+        body=output_zipfile )
 end
 
 """
@@ -228,6 +235,7 @@ end
 
 """
 function output_fetch_item(req::HTTP.Request)
+
     return "Fetch Item"
 end
 

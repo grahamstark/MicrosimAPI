@@ -248,7 +248,7 @@ function get_example_hhs(settings::Settings)
 end 
 
 
-function calc_examples( base :: TaxBenefitSystem, sys :: TaxBenefitSystem, settings :: Settings ) :: Vector
+function calc_examples( settings :: Settings, base :: TaxBenefitSystem, sys :: TaxBenefitSystem ) :: Vector
 	v = []
 	EXAMPLE_HHS = get_example_hhs(settings)
 	for ehh in EXAMPLE_HHS

@@ -13,7 +13,7 @@ using Reexport
 using StructTypes
 using UUIDs
 
-import Base.get # Dunno why I need this ... 
+# import Base.get # Dunno why I need this ... 
 
 using ScottishTaxBenefitModel
 using .BCCalcs
@@ -39,11 +39,9 @@ export cors_middleware, session_middleware, SESSIONS
 
 const SESSION_TIMEOUT = Minute(240)
 
-# Simple in-memory session store
-const SESSIONS = Dict{String, Dict{String, Any}}()
-
-include("middleware.jl")
 include("definitions.jl")
+include("middleware.jl")
+include("examples.jl")
 include("scotben.jl")
 
 # staticfiles( "web", "web" )

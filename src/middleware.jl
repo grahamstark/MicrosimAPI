@@ -17,14 +17,17 @@ function session_middleware(handler)
         # Create new session if none exists or session is invalid
         if isnothing(session_id) || !haskey(SESSIONS, session_id)
             session_id = string(uuid4())
-            SESSIONS[session_id] = Dict{String, Any}(
+            SESSIONS[session_id] = SessionEntry()
+            #=
+                Dict{String, Any}(
                 "created_at" => now(),
                 "last_accessed" => now(),
                 "data" => Dict{String, Any}()
             )
+            =#
         else
             # Update last accessed time
-            SESSIONS[session_id]["last_accessed"] = now()
+            SESSIONS[session_id].last_accessed = now()
             
             # Clean up expired sessions
             cleanup_sessions()
@@ -80,9 +83,9 @@ end # cleanup
 """
 Helper to get current session data from request
 """
-function get_session(req::HTTP.Request)
+function get_session_data(req::HTTP.Request)
     @show typeof( req.context )
-    return Base.get(req.context, :session, Dict{String, Any}())
+    return Base.get(req.context, :session, Dict{String,Any}())
 end
 
 function cors_middleware( handler )
