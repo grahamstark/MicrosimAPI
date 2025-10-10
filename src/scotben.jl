@@ -15,15 +15,12 @@ function list_default_systems()
     choices 
 end
 
-
 const DEFAULT_SYSTEMS = list_default_systems()
 
 """
 
 """
 function params_list_available(req::HTTP.Request)
-    session_data = get_session_data( req )
-    @show session_data 
     return json(DEFAULT_SYSTEMS)
 end
 
@@ -33,12 +30,14 @@ end
 function params_initialise(req::HTTP.Request, JsonFragment)
     session_id = req.context[:session_id]
     data = json(req)    
+    #=
     # Safely extract parameter with get()
     defid = get(data, "default-sys", nothing)
     def = DEFAULT_SYSTEMS[defid]
     SBRUNS[session_id].system = 
         STBParameters.get_default_system_for_fin_year( 
             def.financial_year; scotland=def.scottish )
+    =#
     return "Initialise"
 end
 

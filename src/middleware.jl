@@ -28,8 +28,7 @@ function session_middleware(handler)
             =#
         else
             # Update last accessed time
-            SESSIONS[session_id].last_accessed = now()
-            
+            SESSIONS[session_id].last_accessed = now()            
             # Clean up expired sessions
             cleanup_sessions()
         end
@@ -71,7 +70,7 @@ function cleanup_sessions()
     expired_sessions = String[]
     
     for (sid, session) in SESSIONS
-        if current_time - session["last_accessed"] > SESSION_TIMEOUT
+        if current_time - session.last_accessed > SESSION_TIMEOUT
             push!(expired_sessions, sid)
         end
     end
