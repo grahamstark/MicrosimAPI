@@ -36,7 +36,7 @@ function session_middleware(handler)
         
         # Add session to request context
         req.context[:session_id] = session_id
-        req.context[:session] = SESSIONS[session_id]["data"]
+        # req.context[:session] = SESSIONS[session_id]["data"]
         
         # Call the actual handler
         response = handler(req)

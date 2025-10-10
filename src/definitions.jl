@@ -219,7 +219,7 @@ end
 # - JOB_QUEUE - Channel of
 #
 const QSIZE = 32
-const SESSION = Dict{String, SessionEntry}()
+const SESSIONS = Dict{String, SessionEntry}()
 const CACHED_RESULTS = Dict{UInt, AllOutput}()
 JOB_QUEUE = Channel{ParamsAndSettings}(QSIZE)
 
