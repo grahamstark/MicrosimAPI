@@ -37,14 +37,11 @@ using .Utils
 
 export cors_middleware, session_middleware, SESSIONS
 
-const SESSION_TIMEOUT = Minute(240)
-
 include("definitions.jl")
 include("middleware.jl")
 include("examples.jl")
 include("scotben.jl")
 
-# staticfiles( "web", "web" )
 dynamicfiles( "web", "web" )
 
 #=
@@ -58,5 +55,19 @@ MicrosimAPI.serve(
     middleware = [cors_middleware, session_middleware])
 
 =#
+
+#
+# Set up job queues 
+# Don't understand this, but see:
+# https://discourse.julialang.org/t/errorexception-task-cannot-be-serialized-with-taskwrapper-struct/26617/4
+# 
+function __init__()
+    global t
+    t = @async calc_one()
+    for i in 1:NUM_HANDLERS # start n tasks to process requests in parallel
+        @info "starting handler $i" 
+        errormonitor(t)
+    end
+end
 
 end # module

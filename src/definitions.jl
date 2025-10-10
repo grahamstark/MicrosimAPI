@@ -1,8 +1,3 @@
-# get around weird bug similar to: https://github.com/GenieFramework/Genie.jl/issues/433
-# __precompile__(false)
-
-const BASE_UUID = UUID("985c312f-129b-4acd-9e40-cb629d184183")
-
 const BIG_A = 9999999999
 
 struct SimpleParams{T}
@@ -72,9 +67,6 @@ function weeklyparams() :: TaxBenefitSystem
    weeklyise!( pars )
    pars
 end
-
-const DEF_PROGRESS = Progress( BASE_UUID, "na", 0, 0, 0, 0 )
-const NO_PROGRESS = ( progress=DEF_PROGRESS, total=-1)
 
 const DEFAULT_PARAMS ::  TaxBenefitSystem = loaddefs()
 
@@ -185,123 +177,128 @@ end
 
 const DEFAULT_SIMPLE_PARAMS :: SimpleParams = map_full_to_simple( DEFAULT_PARAMS )
 
+#
+# Foolish decision to index runs by UUIDs...
+#
+const BASE_UUID = UUID("985c312f-129b-4acd-9e40-cb629d184183")
+const DEF_PROGRESS = Progress( BASE_UUID, "na", 0, 0, 0, 0 )
+#
+# This goes in the job queue
+#
+@with_kw struct ParamsAndSettings
+	settings = Settings()
+	params = [DEFAULT_SIMPLE_PARAMS, DEFAULT_SIMPLE_PARAMS]
+end
+
+#
+# This holds the data in the cacbe
+#
 struct AllOutput
-	summary :: NamedTuple
+	summary  :: NamedTuple
     short_summary :: NamedTuple
 	examples :: Vector
+    progress :: Progress
 end
 
-function api_run( settings :: Settings, systems::Vector; supress_dumps=false )::AllOutput
-    # delete higher rates
-    global running_total
-    tot = 0
-    results = do_one_run( settings, systems, run_progress )
-    summaries = summarise_frames!( results, settings )
-    dump_summaries( settings, summaries )
-    short_summary = make_short_summary( summaries )
-    if ! supress_dumps
-        dump_summaries( settings, summaries )
-    end
-    # zipname = zip_dump( settings )
-    examples = calc_examples( settings, systems[1], systems[2])
-    return AllOutput( summaries, short_summary, examples )
-end
+const NULL_ALL_OUTPUT = AllOutput( (;), (;), [], DEF_PROGRESS )
 
-function get_default_output()::AllOutput
-    settings = Settings()
-
-end
-
-const DEFAULT_OUTPUT = get_default_output()
-
+#
+# User data in a session
+#
 @with_kw mutable struct SessionEntry
     session_id = ""
     last_accessed = now()
     created_at = now()
-
-    params = DEFAULT_SIMPLE_PARAMS
-    results = nothing
+    params_and_settings = ParamsAndSettings()   
 end
 
+#
+# 3 data structures
+# - SESSION - Dict of user data, keyed by session_id
+# - CACHED_RESULTS - Dict, keyed by hash of parameters
+# - JOB_QUEUE - Channel of
+#
+const QSIZE = 32
+const SESSION = Dict{String, SessionEntry}()
+const CACHED_RESULTS = Dict{UInt, AllOutput}()
+JOB_QUEUE = Channel{ParamsAndSettings}(QSIZE)
 
-# Simple in-memory session store
-const SESSIONS = Dict{String, SessionEntry}()
-
-struct ParamsAndSettings{T}
-	session_id  :: String
-	simple   :: Vector{SimpleParams{T}}
-end
 #
 # this many simultaneous (sp) runs
 #
 const NUM_HANDLERS = 4
-
-const QSIZE = 32
-
-IN_QUEUE = Channel{ParamsAndSettings}(QSIZE)
-
 # configure logger; see: https://docs.julialang.org/en/v1/stdlib/Logging/index.html
 # and: https://github.com/oxinabox/LoggingExtras.jl
-logger = FileLogger("log/stb2_log.txt")
+logger = FileLogger(joinpath("log", "microsim-api-log.txt"))
 global_logger(logger)
 LogLevel( Logging.Debug )
+
 #
 # needs to be here 
 #
-# Save results by query string & just return that
-# TODO complete this.
-const CACHED_RESULTS = Dict{UInt,AllOutput}()
-
-function cacheout(simp::SimpleParams,allo::AllOutput)
-	CACHED_RESULTS[riskyhash(simp)] = allo
+function cache_output( h:: UInt, allo::AllOutput)
+	CACHED_RESULTS[h] = allo
 end
 
-function getout( simp::SimpleParams )::Union{Nothing,AllOutput}
-	u = riskyhash(simp)
-    return Base.get( CACHED_RESULTS, u, nothing )
+function update_progress( h::UInt, progress :: Progress )
+    CACHED_RESULTS[h].progress = progress
 end
 
+function update_progress( h::UInt, state::String )
+    CACHED_RESULTS[h].progress.state = state
+end
+
+function get_output( h :: UInt )::Union{Nothing,AllOutput}
+    return Base.get( CACHED_RESULTS, h, nothing )
+end
 
 function do_run(
-    prs :: ParamsAndSettings ) :: AllOutput
-	@info "do_run entered"
-	settings = initialise_settings()
-	sys1 :: TaxBenefitSystem = map_simple_to_full( prs.simple[1] )
-    sys2 :: TaxBenefitSystem = map_simple_to_full( prs.simple[2] )
-    weeklyise!( sys1 )
-	weeklyise!( sys2 )
-	obs = Observable(
-		Progress(settings.uuid, "",0,0,0,0))
-	tot = 0
-	of = on(obs) do p
-        tot += p.step
-        @info "monitor tot=$tot p = $(p)"
-		GenieSession.set!( session, :progress, (progress=p,total=tot))
-	end
-	results = do_one_run( settings, [sys], obs )
-	outf = summarise_frames!( results, settings )
-	gl = make_gain_lose( DEFAULT_RESULTS.results.hh[1], results.hh[1], settings )
-	exres = calc_examples( DEFAULT_WEEKLY_PARAMS, sys, settings )
-	aout = AllOutput( results, outf, gl, exres )
-    cacheout(simple,aout)
-    obs[]= Progress( settings.uuid, "end", -99, -99, -99, -99 )
-    aout
+    prs :: ParamsAndSettings )
+    h = riskyhash( prs )
+    res = get_output(h)
+    if isnothing( res )
+        settings = prs.settings
+        @info "do_run entered"
+        update_progress( h, "starting" )
+        sys1 = deepcopy( DEFAULT_PARAMS )
+        sys2 = deepcopy( DEFAULT_PARAMS)
+        map_simple_to_full!( sys2, prs.params[2] )
+        weeklyise!( sys1 )
+        weeklyise!( sys2 )
+        obs = Observable(
+            Progress(settings.uuid, "",0,0,0,0))
+        tot = 0
+        of = on(obs) do p
+            tot += p.step
+            @info "monitor tot=$tot p = $(p)"
+            update_progress( h, p )
+        end
+        results = do_one_run( settings, [sys1,sys2], obs )
+        summaries = summarise_frames!( results, settings )
+        short_summary = make_short_summary( summaries )
+        exres = calc_examples( DEFAULT_WEEKLY_PARAMS, sys, settings )
+        endprog = Progress( settings.uuid, "end", -99, -99, -99, -99 )
+        obs[] = endprog
+        aout = AllOutput( summaries, short_summary, exres, endprog )
+        cache_output( prs, aout )
+        if do_dumps
+            dump_summaries( settings, summaries )
+        end
+    end
 end
 
-function submit_job( 
-    session_id :: String, 
-    simple  :: SimpleParams )
+function submit_job( prs :: ParamsAndSettings )
     @info "submit_job entered"
-    put!( IN_QUEUE, ParamsAndSettings( simple, session_id ))
-	@info "submit exiting queue is now $IN_QUEUE"
+    put!( JOB_QUEUE, prs )
+	@info "submit exiting queue is now $JOB_QUEUE"
 end
 
 function calc_one()
 	while true
 		@info "calc_one entered"
-		params = take!( IN_QUEUE )
-		@info "params taken from IN_QUEUE; got params"
-		do_run( params.session, params.simple )
+		prs = take!( JOB_QUEUE )
+        @info "params taken from JOB_QUEUE; got params"
+		do_run( prs )
 		@info "model run OK; putting results into CACHED_RESULTS"		
 	end
 end
