@@ -30,36 +30,32 @@ end
 function params_initialise(req::HTTP.Request, JsonFragment)
     session_id = req.context[:session_id]
     data = json(req)    
-    #=
-    # Safely extract parameter with get()
-    defid = get(data, "default-sys", nothing)
-    def = DEFAULT_SYSTEMS[defid]
-    SBRUNS[session_id].system = 
-        STBParameters.get_default_system_for_fin_year( 
-            def.financial_year; scotland=def.scottish )
-    =#
-    return "Initialise"
+    SESSIONS[session_id].params[2]=deepcopy(DEFAULT_SIMPLE_PARAMS)
+    return json( SESSIONS[session_id].params[2] )
 end
 
 """
 
 """
 function params_set(req::HTTP.Request)
+    session_id = req.context[:session_id]
     sp = json( req, SimpleParams )
     errs = validate( sp )
     if length( errs ) == 0
-
+        SESSIONS[session_id].params_and_settings.params[2] = sp
+        return json(sp)
     else
-
+        return json( errs )
     end
-    return "Set"
 end
 
 """
 
 """
 function params_validate(req::HTTP.Request)
-    return "Validate"
+    sp = json( req, SimpleParams )
+    errs = validate( sp )
+    return json( errs )
 end
 
 """
@@ -174,6 +170,9 @@ end
 
 """
 function run_submit(req::HTTP.Request)
+    session_id = req.context[:session_id]
+    prs = SESSIONS[session_id].params_and_settings
+    submit_job( prs )
     return "Submit"
 end
 
@@ -191,8 +190,23 @@ function run_abort(req::HTTP.Request)
     return "Abort"
 end
 
+
+"""
+
+"""
+function run_statuses(req::HTTP.Request)
+    return HTTP.Response(
+        200,
+        ["Content-Type" => "text/markdown"],
+        body=STBOutput.DUMP_FILE_DESCRIPTION )
+
+end
+
+
 @get "/scotben/run/status" run_status
 @put "/scotben/run/status" run_status
+@get "/scotben/run/statuses" run_statuses
+@put "/scotben/run/statuses" run_statuses
 @get "/scotben/run/submit" run_submit
 @put "/scotben/run/submit" run_submit
 @get "/scotben/run/abort" run_abort
