@@ -210,6 +210,7 @@ const NULL_ALL_OUTPUT = AllOutput( (;), (;), [], DEF_PROGRESS )
     last_accessed = now()
     created_at = now()
     params_and_settings = ParamsAndSettings()   
+    h = UInt(0)
 end
 
 #

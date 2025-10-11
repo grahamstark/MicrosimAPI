@@ -30,7 +30,9 @@ end
 function params_initialise(req::HTTP.Request, JsonFragment)
     session_id = req.context[:session_id]
     data = json(req)    
-    SESSIONS[session_id].params[2]=deepcopy(DEFAULT_SIMPLE_PARAMS)
+    sess = SESSIONS[session_id].params_and_settings
+    sess.params[2]=deepcopy(DEFAULT_SIMPLE_PARAMS)
+    sess.h = riskyhash( sess.params_and_settings )
     return json( SESSIONS[session_id].params[2] )
 end
 
@@ -43,6 +45,7 @@ function params_set(req::HTTP.Request)
     errs = validate( sp )
     if length( errs ) == 0
         SESSIONS[session_id].params_and_settings.params[2] = sp
+        SESSIONS[session_id].h = riskyhash( SESSIONS[session_id].params_and_settings )
         return json(sp)
     else
         return json( errs )
@@ -171,8 +174,18 @@ end
 """
 function run_submit(req::HTTP.Request)
     session_id = req.context[:session_id]
-    prs = SESSIONS[session_id].params_and_settings
-    submit_job( prs )
+    h = SESSIONS[session_id].h
+    res = Base.get(CACHED_RESULTS, h, nothing )
+    if isnothing( res )
+        try
+            submit_job( prs )
+            return json((; error="ok", info=Progress( BASE_UUID, "submitted", 0, 0, 0, 0 ) ))
+        catch e
+            return json((; error="error", info=e ))
+        end
+    else
+        return json((; error="ok", info=res.progress ))
+    end
     return "Submit"
 end
 
@@ -180,6 +193,14 @@ end
 
 """
 function run_status(req::HTTP.Request)
+    session_id = req.context[:session_id]
+    h = SESSIONS[session_id].h
+    res = Base.get(CACHED_RESULTS, h, nothing )
+    if isnothing( res )
+        return json((; error="no_run", info="" ))
+    else
+        return json((; error="ok", info=res.progress ))
+    end
     return "Status"
 end
 
