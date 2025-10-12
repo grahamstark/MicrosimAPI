@@ -14,6 +14,7 @@ struct SimpleParams{T}
     uc_taper :: T
 end
 StructTypes.StructType(::Type{SimpleParams}) = StructTypes.Struct()
+StructTypes.StructType(::Type{Progress})  = StructTypes.Struct()
 
 function validate_value!( d::Dict, name::String, v :: Real ; min=0, max=1000 )
     if (v < min) || (v > max)
@@ -200,7 +201,7 @@ struct AllOutput
     progress :: Progress
 end
 
-const NULL_ALL_OUTPUT = AllOutput( (;), (;), [], DEF_PROGRESS )
+const NULL_ALL_OUTPUT = AllOutput( (;), [], DEF_PROGRESS )
 
 #
 # User data in a session
@@ -241,65 +242,53 @@ function cache_output( h:: UInt, allo::AllOutput)
 	CACHED_RESULTS[h] = allo
 end
 
-function update_progress( h::UInt, progress :: Progress )
-    CACHED_RESULTS[h].progress = progress
+function update_progress( h :: UInt, p :: Progress )
+    CACHED_RESULTS[h].progress = p
 end
 
-function update_progress( h::UInt, state::String )
-    CACHED_RESULTS[h].progress.state = state
-end
-
-function get_output( h :: UInt )::Union{Nothing,AllOutput}
-    return Base.get( CACHED_RESULTS, h, nothing )
-end
-
-function do_run(
-    prs :: ParamsAndSettings )
-    h = riskyhash( prs )
-    res = get_output(h)
-    if isnothing( res )
-        settings = prs.settings
-        @info "do_run entered"
-        update_progress( h, "starting" )
-        sys1 = deepcopy( DEFAULT_PARAMS )
-        sys2 = deepcopy( DEFAULT_PARAMS)
-        map_simple_to_full!( sys2, prs.params[2] )
-        weeklyise!( sys1 )
-        weeklyise!( sys2 )
-        obs = Observable(
-            Progress(settings.uuid, "",0,0,0,0))
-        tot = 0
-        of = on(obs) do p
-            tot += p.step
-            @info "monitor tot=$tot p = $(p)"
-            update_progress( h, p )
-        end
-        results = do_one_run( settings, [sys1,sys2], obs )
-        summaries = summarise_frames!( results, settings )
-        # short_summary = make_short_summary( summaries )
-        exres = calc_examples( DEFAULT_WEEKLY_PARAMS, sys, settings )
-        aout = AllOutput( summaries, exres, endprog )
-        cache_output( prs, aout )
-        if do_dumps
-            dump_summaries( settings, summaries )
-        end
-        endprog = Progress( settings.uuid, "completed", -99, -99, -99, -99 )
-        obs[] = endprog
+function do_run( h :: UInt, prs :: ParamsAndSettings; do_dumps = false )
+    settings = prs.settings
+    @info "do_run entered"
+    update_progress( prs.h, Progress( settings.uuid, "starting", 0, 0, 0, 0 ))
+    sys1 = deepcopy( DEFAULT_PARAMS )
+    sys2 = deepcopy( DEFAULT_PARAMS)
+    map_simple_to_full!( sys2, prs.params[2] )
+    weeklyise!( sys1 )
+    weeklyise!( sys2 )
+    obs = Observable(
+        Progress(settings.uuid, "",0,0,0,0))
+    tot = 0
+    of = on(obs) do p
+        tot += p.step
+        @info "monitor tot=$tot p = $(p)"
+        update_progress( h, p )
+    end
+    results = do_one_run( settings, [sys1,sys2], obs )
+    summaries = summarise_frames!( results, settings )
+    # short_summary = make_short_summary( summaries )
+    exres = calc_examples( DEFAULT_WEEKLY_PARAMS, sys, settings )
+    endprog = Progress( settings.uuid, "completed", -99, -99, -99, -99 )
+    aout = AllOutput( summaries, exres, endprog )
+    cache_output( h, aout )
+    if do_dumps
+        dump_summaries( settings, summaries )
     end
 end
 
-function submit_job( prs :: ParamsAndSettings )
+function submit_job( h::UInt, prs :: ParamsAndSettings )
     @info "submit_job entered"
-    put!( JOB_QUEUE, prs )
+    @assert (! haskey( CACHED_RESULTS, h )) # if so, why are we here?
+    CACHED_RESULTS[h] = NULL_ALL_OUTPUT # initialise blank entry
+    put!( JOB_QUEUE, (; h, prs ))
 	@info "submit exiting queue is now $JOB_QUEUE"
 end
 
 function calc_one()
 	while true
 		@info "calc_one entered"
-		prs = take!( JOB_QUEUE )
+		rs = take!( JOB_QUEUE )
         @info "params taken from JOB_QUEUE; got params"
-		do_run( prs )
+		do_run( rs.h, rs.prs )
 		@info "model run OK; putting results into CACHED_RESULTS"		
 	end
 end

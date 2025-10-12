@@ -27,13 +27,13 @@ end
 """
 
 """
-function params_initialise(req::HTTP.Request, JsonFragment)
+function params_initialise(req::HTTP.Request)
     session_id = req.context[:session_id]
     data = json(req)    
-    sess = SESSIONS[session_id].params_and_settings
-    sess.params[2]=deepcopy(DEFAULT_SIMPLE_PARAMS)
-    sess.h = riskyhash( sess.params_and_settings )
-    return json( SESSIONS[session_id].params[2] )
+    prs = SESSIONS[session_id].params_and_settings
+    prs.params[2]=deepcopy(DEFAULT_SIMPLE_PARAMS)
+    SESSIONS[session_id].h = riskyhash( prs )
+    return json( SESSIONS[session_id].params_and_settings.params[2] )
 end
 
 """
@@ -80,7 +80,7 @@ const TEXT_DESC = md"""
 const OUTPUT_ITEMS = OrderedDict([
     "headline_figures"=>"Headline Summary (json)",
     "quantiles"=>"Quantiles (50 rows, 4 cols) (csv)", 
-    "deciles" => "Quantiles (10 rows, 4 cols) (csv)", , 
+    "deciles" => "Quantiles (10 rows, 4 cols) (csv)",
     "income_summary" => "Income Summary (csv)", 
     "poverty" => "Poverty Measures (json)", 
     "inequality" => "Inequality Measures (json)", 
@@ -90,26 +90,36 @@ const OUTPUT_ITEMS = OrderedDict([
     "gain_lose/dec_gl" => "Gain Lose by Decile (csv)",
     "gain_lose/children_gl" => "Gain Lose by Number of Children (csv)",
     "gain_lose/hhtype_gl" => "Gain Lose by Household Size (csv)",
-    "poverty_lines" => "Computed Poverty Lines",
+    "poverty_lines" => "Computed Poverty Lines (json)",
     "short_income_summary"=>"Short Income Summary (csv)",
     "income_hists"=>"Histogram of Incomes (csv)",
     "povtrans_matrix"=>"Poverty Transitions Matrix (csv)",
     "examples"=>"Simple Examples (json)"
 ])
 
+const CSV_ITEMS = [
+    "quantiles",
+    "deciles",
+    "income_summary", 
+    "metrs", 
+    "gain_lose",
+    "short_income_summary",
+    "income_hists",
+    "povtrans_matrix"]
+
 
 const LABELS = OrderedDict([
-"taxrates" => "Tax Rates (%)",
-"taxbands" => "Tax Bands (£pa)",
-"nirates" => "NI Rates (%)",
-"nibands" => "NI Bands (£pa)",
-"taxallowance" => "Tax Allowance (£pa)",
-"child_benefit" => "Child Benefit (£pw)",
-"pension" => "Pension  (£pa)",
-"scottish_child_payment" => "Scottish Child Payment (£pa)",
-"scp_age" => "Scottish Child Payment Maximum Age (years)",
-"uc_single" => "Universal Credit Single Person (£pm)",
-"uc_taper" => "Universal Credit Taper (pct)"])
+    "taxrates" => "Tax Rates (%)",
+    "taxbands" => "Tax Bands (£pa)",
+    "nirates" => "NI Rates (%)",
+    "nibands" => "NI Bands (£pa)",
+    "taxallowance" => "Tax Allowance (£pa)",
+    "child_benefit" => "Child Benefit (£pw)",
+    "pension" => "Pension  (£pa)",
+    "scottish_child_payment" => "Scottish Child Payment (£pa)",
+    "scp_age" => "Scottish Child Payment Maximum Age (years)",
+    "uc_single" => "Universal Credit Single Person (£pm)",
+    "uc_taper" => "Universal Credit Taper (pct)"])
 
 const RUN_STATUSES = OrderedDict([
     "submitted" => "Job Submitted",
@@ -127,10 +137,8 @@ const RUN_STATUSES = OrderedDict([
 
 """
 function params_describe(req::HTTP.Request)
-    HTTP.Response(
-        200,
-        ["Content-Type" => "text/markdown"],
-        body=TEXT_DESC )
+    return string(TEXT_DESC) # server objects to md"...
+  
 end
 
 """
@@ -145,10 +153,7 @@ end
 
 """
 function params_helppage( req::HTTP.Request )
-     HTTP.Response(
-        200,
-        ["Content-Type" => "text/markdown"],
-        body=TEXT_DESC )
+    return string(TEXT_DESC)
 end
 
 """
@@ -242,14 +247,15 @@ end
 """
 function run_submit(req::HTTP.Request)
     session_id = req.context[:session_id]
+    prs = SESSIONS[session_id].params_and_settings
     h = SESSIONS[session_id].h
     res = Base.get(CACHED_RESULTS, h, nothing )
     if isnothing( res )
         try
-            submit_job( prs )
+            submit_job( h, prs )
             return json((; error="ok", info=Progress( BASE_UUID, "submitted", 0, 0, 0, 0 ) ))
         catch e
-            return json((; error="error", info=e ))
+            return json((; error="error", info=""))
         end
     else
         return json((; error="ok", info=res.progress ))
@@ -263,6 +269,10 @@ end
 function run_status(req::HTTP.Request)
     session_id = req.context[:session_id]
     h = SESSIONS[session_id].h
+    @show h
+    # print( SESSIONS )
+    # @show CACHED_RESULTS
+    # @show JOB_QUEUE
     res = Base.get(CACHED_RESULTS, h, nothing )
     if isnothing( res )
         return json((; error="no_run", info="" ))
@@ -331,22 +341,16 @@ function output_fetch_item(req::HTTP.Request, name, subname )
     res = Base.get(CACHED_RESULTS, h, nothing )
     if ! isnothing( res )
         ns = Symbol( name )
-
+        item = nothing
+        ctype = if name in CSV_ITEMS
+            "text/csv"
+        else
+            "application/json"
+        end
+        if name == "gain_lose"
+            sns = Symbol( subname )            
+        end
     end
-    headline_figures,
-    quantiles, 
-    deciles, 
-    income_summary, 
-    poverty, 
-    inequality, 
-    metrs, 
-    child_poverty,
-    gain_lose,
-    poverty_lines,
-    short_income_summary,
-    income_hists,
-    povtrans_matrix,
-
 end
 
 

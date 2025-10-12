@@ -1,19 +1,20 @@
-module MicrosimAPI
+# module MicrosimAPI
 
+# import Base.get # see: https://github.com/OxygenFramework/Oxygen.jl/issues/164
 using DataStructures
 using Dates
 using HTTP
 using JSON3
 using LoggingExtras
 using Observables
-using Oxygen
+using Oxygen # : @get, @put, json, dynamicfiles, serve
 using Parameters
 using Random
 using Reexport
 using StructTypes
 using UUIDs
 
-import Base.get # Dunno why I need this ... 
+using Markdown
 
 using ScottishTaxBenefitModel
 using .BCCalcs
@@ -33,16 +34,14 @@ using .STBOutput
 using .STBParameters
 using .Utils
 
-@oxidise
+# Oxygen.@oxidise
 
-export cors_middleware, session_middleware, SESSIONS
+# export cors_middleware, session_middleware, SESSIONS
 
 include("definitions.jl")
 include("middleware.jl")
 include("examples.jl")
 include("scotben.jl")
-
-dynamicfiles( "web", "web" )
 
 #=
 use:
@@ -51,7 +50,7 @@ using MicrosimAPI
 MicrosimAPI.serve( 
     # host="localhost", 
     port=8089,
-    revise=:eager,
+    # revise=:eager,
     middleware = [cors_middleware, session_middleware])
 
 =#
@@ -70,4 +69,14 @@ function __init__()
     end
 end
 
-end # module
+function svr()
+    __init__()
+    dynamicfiles( "web", "web" )
+    serve( 
+        # host="localhost", 
+        port=8089,
+        # revise=:eager,
+        middleware = [cors_middleware, session_middleware])
+end
+
+# end # module
