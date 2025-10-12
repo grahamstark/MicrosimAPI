@@ -61,11 +61,76 @@ function params_validate(req::HTTP.Request)
     return json( errs )
 end
 
+const TEXT_DESC = md"""
+
+    taxrates :: Vector{T} :: min 0 max 100 pct
+    taxbands :: Vector{T} :: min 0 max unlimited
+    nirates :: Vector{T} :: min 0 max 100 pct
+    nibands :: Vector{T} :: min 0 max 100 annual
+    taxallowance :: T min 0 max 100_000 annual
+    child_benefit :: T min 0 max 1000 weekly
+    pension :: T  min 0 max 1000 weekly
+    scottish_child_payment :: T  min 0 max 1000 weekly
+    scp_age :: Int min 0 max 21 
+    uc_single :: T  min 0 max 1000 weekly
+    uc_taper :: T  min 0 max 100 pct
+
+"""
+
+const OUTPUT_ITEMS = OrderedDict([
+    "headline_figures"=>"Headline Summary (json)",
+    "quantiles"=>"Quantiles (50 rows, 4 cols) (csv)", 
+    "deciles" => "Quantiles (10 rows, 4 cols) (csv)", , 
+    "income_summary" => "Income Summary (csv)", 
+    "poverty" => "Poverty Measures (json)", 
+    "inequality" => "Inequality Measures (json)", 
+    "metrs" => "Marginal Effective Tax Rates histogram (csv)", 
+    "child_poverty" => "Child Poverty Count (json)",
+    "gain_lose/ten_gl" => "Gain Lose by Tenure (csv)",
+    "gain_lose/dec_gl" => "Gain Lose by Decile (csv)",
+    "gain_lose/children_gl" => "Gain Lose by Number of Children (csv)",
+    "gain_lose/hhtype_gl" => "Gain Lose by Household Size (csv)",
+    "poverty_lines" => "Computed Poverty Lines",
+    "short_income_summary"=>"Short Income Summary (csv)",
+    "income_hists"=>"Histogram of Incomes (csv)",
+    "povtrans_matrix"=>"Poverty Transitions Matrix (csv)",
+    "examples"=>"Simple Examples (json)"
+])
+
+
+const LABELS = OrderedDict([
+"taxrates" => "Tax Rates (%)",
+"taxbands" => "Tax Bands (£pa)",
+"nirates" => "NI Rates (%)",
+"nibands" => "NI Bands (£pa)",
+"taxallowance" => "Tax Allowance (£pa)",
+"child_benefit" => "Child Benefit (£pw)",
+"pension" => "Pension  (£pa)",
+"scottish_child_payment" => "Scottish Child Payment (£pa)",
+"scp_age" => "Scottish Child Payment Maximum Age (years)",
+"uc_single" => "Universal Credit Single Person (£pm)",
+"uc_taper" => "Universal Credit Taper (pct)"])
+
+const RUN_STATUSES = OrderedDict([
+    "submitted" => "Job Submitted",
+    "do-one-run-start" => "Run Started",
+    "weights" => "Weights Calculation",
+    "disability_eligibility" => "Calibrating Disability Eligibility",
+    "starting" => "Main Calculations Starting",
+    "run" => "Running Through Households",
+    "dumping_frames" => "Dumping Data to Files",
+    "do-one-run-end" => "Run Ended",
+    "completed" => "Task Completed - Output is Ready"])
+
+
 """
 
 """
 function params_describe(req::HTTP.Request)
-    return "Describe"
+    HTTP.Response(
+        200,
+        ["Content-Type" => "text/markdown"],
+        body=TEXT_DESC )
 end
 
 """
@@ -80,14 +145,17 @@ end
 
 """
 function params_helppage( req::HTTP.Request )
-    return "HelpPage"
+     HTTP.Response(
+        200,
+        ["Content-Type" => "text/markdown"],
+        body=TEXT_DESC )
 end
 
 """
 
 """
 function params_labels(req::HTTP.Request)
-    return "Labels"
+    return json( LABELS )
 end
 
 
@@ -208,7 +276,7 @@ end
 
 """
 function run_abort(req::HTTP.Request)
-    return "Abort"
+    return "We Can't Abort.."
 end
 
 
@@ -216,11 +284,7 @@ end
 
 """
 function run_statuses(req::HTTP.Request)
-    return HTTP.Response(
-        200,
-        ["Content-Type" => "text/markdown"],
-        body=STBOutput.DUMP_FILE_DESCRIPTION )
-
+    return json( RUN_STATUSES )
 end
 
 
@@ -237,11 +301,7 @@ end
 
 """
 function output_items(req::HTTP.Request)
-    @show MicrosimAPI.SESSIONS    
-    return HTTP.Response(
-        200,
-        ["Content-Type" => "text/markdown"],
-        body=STBOutput.DUMP_FILE_DESCRIPTION )
+    return json(OUTPUT_ITEMS)
 end
 
 """
@@ -259,15 +319,34 @@ end
 
 """
 function output_labels(req::HTTP.Request)
-    return "Labels"
+    return "Labels, possibly."
 end
 
 """
 
 """
-function output_fetch_item(req::HTTP.Request)
+function output_fetch_item(req::HTTP.Request, name, subname )
+    session_id = req.context[:session_id]
+    h = SESSIONS[session_id].h
+    res = Base.get(CACHED_RESULTS, h, nothing )
+    if ! isnothing( res )
+        ns = Symbol( name )
 
-    return "Fetch Item"
+    end
+    headline_figures,
+    quantiles, 
+    deciles, 
+    income_summary, 
+    poverty, 
+    inequality, 
+    metrs, 
+    child_poverty,
+    gain_lose,
+    poverty_lines,
+    short_income_summary,
+    income_hists,
+    povtrans_matrix,
+
 end
 
 
@@ -277,5 +356,5 @@ end
 @put "/scotben/output/phunpak" output_phunpak
 @get "/scotben/output/labels" output_labels
 @put "/scotben/output/labels" output_labels
-@get "/scotben/output/fetch/item" output_fetch_item
-@put "/scotben/output/fetch/item" output_fetch_item
+@get "/scotben/output/fetch/item/{name}/{subname}" output_fetch_item
+@put "/scotben/output/fetch/item/{name}/{subname}" output_fetch_item

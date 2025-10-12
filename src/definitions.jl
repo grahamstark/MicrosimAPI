@@ -195,7 +195,7 @@ end
 #
 struct AllOutput
 	summary  :: NamedTuple
-    short_summary :: NamedTuple
+    # short_summary :: NamedTuple
 	examples :: Vector
     progress :: Progress
 end
@@ -276,15 +276,15 @@ function do_run(
         end
         results = do_one_run( settings, [sys1,sys2], obs )
         summaries = summarise_frames!( results, settings )
-        short_summary = make_short_summary( summaries )
+        # short_summary = make_short_summary( summaries )
         exres = calc_examples( DEFAULT_WEEKLY_PARAMS, sys, settings )
-        endprog = Progress( settings.uuid, "end", -99, -99, -99, -99 )
-        obs[] = endprog
-        aout = AllOutput( summaries, short_summary, exres, endprog )
+        aout = AllOutput( summaries, exres, endprog )
         cache_output( prs, aout )
         if do_dumps
             dump_summaries( settings, summaries )
         end
+        endprog = Progress( settings.uuid, "completed", -99, -99, -99, -99 )
+        obs[] = endprog
     end
 end
 
