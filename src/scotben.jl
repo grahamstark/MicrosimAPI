@@ -270,9 +270,9 @@ function run_status(req::HTTP.Request)
     session_id = req.context[:session_id]
     h = SESSIONS[session_id].h
     @show h
-    # print( SESSIONS )
-    # @show CACHED_RESULTS
-    # @show JOB_QUEUE
+    @show  SESSIONS
+    @show CACHED_RESULTS
+    @show JOB_QUEUE
     res = Base.get(CACHED_RESULTS, h, nothing )
     if isnothing( res )
         return json((; error="no_run", info="" ))

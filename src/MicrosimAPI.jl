@@ -1,6 +1,4 @@
 # module MicrosimAPI
-
-# import Base.get # see: https://github.com/OxygenFramework/Oxygen.jl/issues/164
 using DataStructures
 using Dates
 using HTTP

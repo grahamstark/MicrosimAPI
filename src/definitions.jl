@@ -183,10 +183,11 @@ const DEFAULT_SIMPLE_PARAMS :: SimpleParams = map_full_to_simple( DEFAULT_PARAMS
 #
 const BASE_UUID = UUID("985c312f-129b-4acd-9e40-cb629d184183")
 const DEF_PROGRESS = Progress( BASE_UUID, "na", 0, 0, 0, 0 )
+
 #
 # This goes in the job queue
 #
-@with_kw struct ParamsAndSettings
+@with_kw mutable struct ParamsAndSettings
 	settings = Settings()
 	params = [DEFAULT_SIMPLE_PARAMS, DEFAULT_SIMPLE_PARAMS]
 end
